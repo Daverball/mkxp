@@ -80,7 +80,6 @@ static const KbBindingData defaultKbBindings[] =
 	{ SDL_SCANCODE_SPACE,  Input::C     },
 	{ SDL_SCANCODE_RETURN, Input::C     },
 	{ SDL_SCANCODE_ESCAPE, Input::B     },
-	{ SDL_SCANCODE_KP_0,   Input::B     },
 	{ SDL_SCANCODE_LSHIFT, Input::A     },
 	{ SDL_SCANCODE_X,      Input::B     },
 	{ SDL_SCANCODE_D,      Input::Z     },
@@ -114,11 +113,13 @@ static const GcBindingData defaultGcBindings[] =
 	{ SDL_CONTROLLER_BUTTON_DPAD_UP,       Input::Up    },
 	{ SDL_CONTROLLER_BUTTON_DPAD_DOWN,     Input::Down  },
 	{ SDL_CONTROLLER_BUTTON_A,             Input::C     },
+	{ SDL_CONTROLLER_BUTTON_A,             Input::Y     },
 	{ SDL_CONTROLLER_BUTTON_B,             Input::B     },
-	{ SDL_CONTROLLER_BUTTON_START,         Input::A     },
+	{ SDL_CONTROLLER_BUTTON_B,             Input::Z     },
+	{ SDL_CONTROLLER_BUTTON_START,         Input::B     },
 	{ SDL_CONTROLLER_BUTTON_X,             Input::X     },
-	{ SDL_CONTROLLER_BUTTON_Y,             Input::Y     },
-	{ SDL_CONTROLLER_BUTTON_BACK,          Input::Z     },
+	{ SDL_CONTROLLER_BUTTON_Y,             Input::R     },
+	{ SDL_CONTROLLER_BUTTON_BACK,          Input::A     },
 	{ SDL_CONTROLLER_BUTTON_LEFTSHOULDER,  Input::L     },
 	{ SDL_CONTROLLER_BUTTON_RIGHTSHOULDER, Input::R     }
 };
@@ -127,14 +128,16 @@ static elementsN(defaultGcBindings);
 
 static const JsBindingData defaultJsBindings[] =
 {
-	{ 0, Input::A },
+	{ 6, Input::A },
+	{ 7, Input::B },
 	{ 1, Input::B },
-	{ 2, Input::C },
-	{ 3, Input::X },
-	{ 4, Input::Y },
-	{ 5, Input::Z },
-	{ 6, Input::L },
-	{ 7, Input::R }
+	{ 0, Input::C },
+	{ 2, Input::X },
+	{ 0, Input::Y },
+	{ 1, Input::Z },
+	{ 4, Input::L },
+	{ 3, Input::R },
+	{ 5, Input::R }
 };
 
 static elementsN(defaultJsBindings);
