@@ -233,6 +233,7 @@ struct RGSSThreadData
 	Config config;
 
 	SDL_GameController *gamecontroller;
+	int gamecontrollerIndex;
 
 	std::string rgssErrorMsg;
 

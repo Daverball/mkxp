@@ -286,11 +286,14 @@ void EventThread::process(RGSSThreadData &rtData)
 			break;
 
 		case SDL_JOYDEVICEADDED :
-			if (event.jdevice.which > 0)
+			if (SDL_JoystickGetAttached(js))
 				break;
 
-			if (SDL_IsGameController(0))
-				rtData.gamecontroller = SDL_GameControllerOpen(0);
+			if (SDL_IsGameController(event.jdevice.which))
+			{
+				rtData.gamecontroller = SDL_GameControllerOpen(event.jdevice.which);
+				rtData.gamecontrollerIndex = event.jdevice.which;
+			}
 			if (rtData.gamecontroller != NULL)
 			{
 				js = SDL_GameControllerGetJoystick(rtData.gamecontroller);
@@ -298,14 +301,44 @@ void EventThread::process(RGSSThreadData &rtData)
 				 * the user hasn't set a custom set of keybinds yet */
 				rtData.bindingUpdateMsg.post(loadBindings(rtData.config, rtData.gamecontroller));
 			}
-			else
+			else if (event.jdevice.which == 0)
 			{
 				js = SDL_JoystickOpen(0);
+				rtData.gamecontrollerIndex = 0;
 			}
 			break;
 
 		case SDL_JOYDEVICEREMOVED :
+			if (SDL_JoystickInstanceID(js) != event.jdevice.which)
+				break;
+
+			/* clean up the connected controller and joy device if it was the one we were tracking */
+			if (rtData.gamecontroller != NULL && SDL_GameControllerGetAttached(rtData.gamecontroller))
+				SDL_GameControllerClose(rtData.gamecontroller);
+			else if (SDL_JoystickGetAttached(js))
+				SDL_JoystickClose(js);
 			resetInputStates();
+
+			/* If there are still joysticks/gamepads around make sure to connect them */
+			js = NULL;
+			rtData.gamecontroller = NULL;
+			rtData.gamecontrollerIndex = 0;
+			for (int i = 0; i < SDL_NumJoysticks(); i++)
+			{
+				if (SDL_IsGameController(i))
+				{
+					rtData.gamecontroller = SDL_GameControllerOpen(i);
+					rtData.gamecontrollerIndex = i;
+					break;
+				}
+			}
+			if (rtData.gamecontroller != NULL)
+			{
+				js = SDL_GameControllerGetJoystick(rtData.gamecontroller);
+				rtData.bindingUpdateMsg.post(loadBindings(rtData.config, rtData.gamecontroller));
+			}
+			else if (SDL_NumJoysticks() > 0)
+				js = SDL_JoystickOpen(0);
 			break;
 
 		case SDL_MOUSEBUTTONDOWN :

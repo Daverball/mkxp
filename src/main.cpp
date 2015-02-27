@@ -284,8 +284,17 @@ int main(int argc, char *argv[])
 	SDL_GameControllerAddMappingsFromRW(controllerDB, 1);
 
 	rtData.gamecontroller = NULL;
-	if (SDL_NumJoysticks() > 0 && SDL_IsGameController(0))
-		rtData.gamecontroller = SDL_GameControllerOpen(0);
+	rtData.gamecontrollerIndex = 0;
+	/* Add the first index which is a valid GameController if there is one */
+	for (int i = 0; i < SDL_NumJoysticks(); i++)
+	{
+		if (SDL_IsGameController(i))
+		{
+			rtData.gamecontroller = SDL_GameControllerOpen(i);
+			rtData.gamecontrollerIndex = i;
+			break;
+		}
+	} 
 
 	/* Load and post key bindings */
 	rtData.bindingUpdateMsg.post(loadBindings(conf, rtData.gamecontroller));
