@@ -30,7 +30,6 @@
 
 #include "sharedstate.h"
 #include "graphics.h"
-#include "settingsmenu.h"
 #include "debugwriter.h"
 
 #include <string.h>
@@ -47,26 +46,13 @@ EventThread::MouseState EventThread::mouseState =
 	0, 0, false, { false }
 };
 
-/* User event codes */
-enum
-{
-	REQUEST_SETFULLSCREEN = 0,
-	REQUEST_WINRESIZE,
-	REQUEST_MESSAGEBOX,
-	REQUEST_SETCURSORVISIBLE,
-
-	UPDATE_FPS,
-
-	EVENT_COUNT
-};
-
-static uint32_t usrIdStart;
+uint32_t EventThread::UsrIdStart = -1;
 
 bool EventThread::allocUserEvents()
 {
-	usrIdStart = SDL_RegisterEvents(EVENT_COUNT);
+	EventThread::UsrIdStart = SDL_RegisterEvents(EVENT_COUNT);
 
-	if (usrIdStart == (uint32_t) -1)
+	if (EventThread::UsrIdStart == (uint32_t) -1)
 		return false;
 
 	return true;
@@ -74,7 +60,8 @@ bool EventThread::allocUserEvents()
 
 EventThread::EventThread()
     : fullscreen(false),
-      showCursor(false)
+      showCursor(false),
+      sMenu(0)
 {}
 
 void EventThread::process(RGSSThreadData &rtData)
@@ -111,8 +98,6 @@ void EventThread::process(RGSSThreadData &rtData)
 	bool havePendingTitle = false;
 
 	bool resetting = false;
-
-	SettingsMenu *sMenu = 0;
 
 	while (true)
 	{
@@ -357,7 +342,7 @@ void EventThread::process(RGSSThreadData &rtData)
 
 		default :
 			/* Handle user events */
-			switch(event.type - usrIdStart)
+			switch(event.type - EventThread::UsrIdStart)
 			{
 			case REQUEST_SETFULLSCREEN :
 				setFullscreen(win, static_cast<bool>(event.user.code));
@@ -419,7 +404,7 @@ void EventThread::cleanup()
 	SDL_Event event;
 
 	while (SDL_PollEvent(&event))
-		if ((event.type - usrIdStart) == REQUEST_MESSAGEBOX)
+		if ((event.type - EventThread::UsrIdStart) == REQUEST_MESSAGEBOX)
 			free(event.user.data1);
 }
 
@@ -458,7 +443,7 @@ void EventThread::requestFullscreenMode(bool mode)
 		return;
 
 	SDL_Event event;
-	event.type = usrIdStart + REQUEST_SETFULLSCREEN;
+	event.type = EventThread::UsrIdStart + REQUEST_SETFULLSCREEN;
 	event.user.code = static_cast<Sint32>(mode);
 	SDL_PushEvent(&event);
 }
@@ -466,7 +451,7 @@ void EventThread::requestFullscreenMode(bool mode)
 void EventThread::requestWindowResize(int width, int height)
 {
 	SDL_Event event;
-	event.type = usrIdStart + REQUEST_WINRESIZE;
+	event.type = EventThread::UsrIdStart + REQUEST_WINRESIZE;
 	event.window.data1 = width;
 	event.window.data2 = height;
 	SDL_PushEvent(&event);
@@ -475,7 +460,7 @@ void EventThread::requestWindowResize(int width, int height)
 void EventThread::requestShowCursor(bool mode)
 {
 	SDL_Event event;
-	event.type = usrIdStart + REQUEST_SETCURSORVISIBLE;
+	event.type = EventThread::UsrIdStart + REQUEST_SETCURSORVISIBLE;
 	event.user.code = mode;
 	SDL_PushEvent(&event);
 }
@@ -487,7 +472,7 @@ void EventThread::showMessageBox(const char *body, int flags)
 	SDL_Event event;
 	event.user.code = flags;
 	event.user.data1 = strdup(body);
-	event.type = usrIdStart + REQUEST_MESSAGEBOX;
+	event.type = EventThread::UsrIdStart + REQUEST_MESSAGEBOX;
 	SDL_PushEvent(&event);
 
 	/* Keep repainting screen while box is open */
@@ -508,6 +493,14 @@ bool EventThread::getShowCursor() const
 
 void EventThread::notifyFrame()
 {
+	/* If settings menu is active send it updates to redraw its frames */
+	if (sMenu)
+	{
+		SDL_Event event;
+		event.user.type = EventThread::UsrIdStart + UPDATE_POPUP;
+		SDL_PushEvent(&event);
+	}
+
 	if (!fps.displaying)
 		return;
 
@@ -541,6 +534,6 @@ void EventThread::notifyFrame()
 
 	SDL_Event event;
 	event.user.code = avgFPS;
-	event.user.type = usrIdStart + UPDATE_FPS;
+	event.user.type = EventThread::UsrIdStart + UPDATE_FPS;
 	SDL_PushEvent(&event);
 }

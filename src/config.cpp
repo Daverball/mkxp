@@ -133,6 +133,7 @@ typedef std::vector<std::string> StringVec;
 namespace po = boost::program_options;
 
 #define CONF_FILE "mkxp.conf"
+#define CONF_FILE_TMP "mkxp-conf.tmp"
 
 Config::Config()
     : rgssVersion(0),
@@ -158,6 +159,184 @@ Config::Config()
 	midi.chorus = false;
 	midi.reverb = false;
 	SE.sourceCount = 6;
+}
+
+/* Pre-convert value to string since we don't care about the type at this point anymore */
+static bool updateConfigFileValue(const char *key, const char *value)
+{
+	/* Open files for reading and writing */
+	std::ifstream confRead;
+	confRead.open(CONF_FILE);
+	std::ofstream confWrite;
+	confWrite.open(CONF_FILE_TMP, std::ofstream::trunc);
+
+	if(confWrite && confRead)
+	{
+		/* Buffer to store config file lines */
+		char buf[512];
+		bool valWritten = false;
+		while(!confRead.eof())
+		{
+			/* Get next line */
+			confRead.getline(buf, 512);
+
+			if(confRead.fail())
+			{
+				/* This means we either encountered an empty line,
+				/* which is fine, or the line was too big. Maybe
+				/* handle the case of long lines in the future? */
+			}
+			else if(strncmp(buf, key, strlen(key)) == 0)
+			{
+				/* This is the line we want to overwrite. For now
+				/* discard duplicate lines of the same key */
+				if(valWritten)
+					continue;
+
+				confWrite << key << '=' << value;
+				valWritten = true;
+			}
+			else
+			{
+				/* Just copy the old line into the new file,
+				/* use gcount()-1 to not copy null character
+				/* but only if not EOF */
+				assert(confRead.gcount() > 0 && confRead.gcount() < 512);
+				int trim = confRead.eof() ? 0 : 1;
+				confWrite.write(buf, confRead.gcount()-trim);
+			}
+			if(!confRead.eof())
+				confWrite << '\n';
+		}
+
+		confRead.close();
+		confWrite.close();
+
+		/* Backup old config file and move the new one into place */
+		remove(CONF_FILE);
+		rename(CONF_FILE_TMP, CONF_FILE);
+
+		return true;
+	}
+	Debug() << CONF_FILE": Failed to update config file.\n";
+
+	if(confRead.is_open())
+		confRead.close();
+
+	if(confWrite.is_open())
+		confWrite.close();
+
+	return false;
+}
+
+bool Config::store(const char *key, int value)
+{
+	std::ifstream confFileRead;
+	confFileRead.open(CONF_FILE);
+	int curValue;
+	if(confFileRead)
+	{
+		/* First read the config file to get the currently stored value
+		/* and check whether it's in the config file at all */
+		po::options_description podesc;
+		po::variables_map vm;
+		podesc.add_options()(key, po::value<int>()->required());
+		try
+		{
+			try
+			{
+				po::store(po::parse_config_file(confFileRead, podesc, true), vm);
+				po::notify(vm);
+				curValue = vm[key].as<int>();
+			}
+			catch(po::multiple_occurrences e)
+			{
+				/* This is fine we're gonna remove the duplicates when storing */
+				curValue = ~value;
+			}
+
+			if(curValue == value)
+			{
+				/* We don't need to store anything */
+				return true;
+			}
+			else
+			{
+				/* Update the relevant config file line */
+				char num[21];
+				snprintf(num, 21, "%d", value);
+				return updateConfigFileValue(key, num);
+			}
+		} catch (...) {}
+		confFileRead.close();
+	}
+	
+	/* Open file for writing */
+	std::ofstream confFileWrite(CONF_FILE, std::ofstream::app);
+	if(confFileWrite)
+	{
+		/* Append new config line */
+		confFileWrite << '\n' << key << '=' << value;
+		confFileWrite.close();
+		return true;
+	}
+
+	/* Some error with opening the file occured */
+	Debug() << CONF_FILE": Failed to update config file.\n";
+	return false;
+}
+
+bool Config::store(const char *key, bool value)
+{
+	std::ifstream confFileRead;
+	confFileRead.open(CONF_FILE);
+	bool curValue;
+	if(confFileRead)
+	{
+		/* First read the config file to get the currently stored value */
+		po::options_description podesc;
+		po::variables_map vm;
+		podesc.add_options()(key, po::value<bool>()->required());
+		try
+		{
+			try
+			{
+				po::store(po::parse_config_file(confFileRead, podesc, true), vm);
+				po::notify(vm);
+				curValue = vm[key].as<bool>();
+			}
+			catch(po::multiple_occurrences &e)
+			{
+				/* This is fine we're gonna remove the duplicates when storing */
+				curValue = !value;
+			}
+			if(curValue == value)
+			{
+				/* We don't need to store anything */
+				return true;
+			}
+			else
+			{
+				/* Update the relevant config file line */
+				return updateConfigFileValue(key, value ? "true" : "false");
+			}
+		} catch (...) {}
+		confFileRead.close();
+	}
+	
+	/* Open file for writing */
+	std::ofstream confFileWrite(CONF_FILE, std::ofstream::app);
+	if(confFileWrite)
+	{
+		/* Append new config line */
+		confFileWrite << '\n' << key << '=' << std::boolalpha << value;
+		confFileWrite.close();
+		return true;
+	}
+
+	/* Some error with opening the file occured */
+	Debug() << CONF_FILE": Failed to update config file.\n";
+	return false;
 }
 
 void Config::read(int argc, char *argv[])

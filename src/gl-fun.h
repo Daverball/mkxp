@@ -73,6 +73,8 @@ typedef void (APIENTRYP _PFNGLDELETESHADERPROC) (GLuint shader);
 typedef void (APIENTRYP _PFNGLSHADERSOURCEPROC) (GLuint shader, GLsizei count, const GLchar* const* strings, const GLint* lengths);
 typedef void (APIENTRYP _PFNGLCOMPILESHADERPROC) (GLuint shader);
 typedef void (APIENTRYP _PFNGLATTACHSHADERPROC) (GLuint program, GLuint shader);
+typedef void (APIENTRYP _PFNGLDETACHSHADERPROC) (GLuint program, GLuint shader);
+typedef GLint (APIENTRYP _PFNGLGETATTRIBLOCATIONPROC) (GLuint program, const GLchar * name);
 typedef void (APIENTRYP _PFNGLGETSHADERIVPROC) (GLuint shader, GLenum pname, GLint* param);
 typedef void (APIENTRYP _PFNGLGETSHADERINFOLOGPROC) (GLuint shader, GLsizei bufSize, GLsizei* length, GLchar* infoLog);
 
@@ -109,6 +111,11 @@ typedef void (APIENTRYP _PFNGLBLITFRAMEBUFFERPROC) (GLint srcX0, GLint srcY0, GL
 typedef void (APIENTRYP _PFNGLGENVERTEXARRAYSPROC) (GLsizei n, GLuint* arrays);
 typedef void (APIENTRYP _PFNGLDELETEVERTEXARRAYSPROC) (GLsizei n, const GLuint* arrays);
 typedef void (APIENTRYP _PFNGLBINDVERTEXARRAYPROC) (GLuint array);
+
+/* Map/Unmap buffer */
+typedef void * (APIENTRYP _PFNGLMAPBUFFERPROC) (GLenum target, GLenum access);
+typedef GLboolean (APIENTRYP _PFNGLUNMAPBUFFERPROC) (GLenum target);
+typedef void (APIENTRYP _PFNGLDRAWARRAYSPROC) (GLenum mode, GLint first, GLsizei count);
 
 #ifdef GLES2_HEADER
 #define GL_NUM_EXTENSIONS 0x821D
@@ -153,6 +160,8 @@ typedef void (APIENTRYP _PFNGLBINDVERTEXARRAYPROC) (GLuint array);
 	GL_FUN(ShaderSource, _PFNGLSHADERSOURCEPROC) \
 	GL_FUN(CompileShader, _PFNGLCOMPILESHADERPROC) \
 	GL_FUN(AttachShader, _PFNGLATTACHSHADERPROC) \
+	GL_FUN(DetachShader, _PFNGLDETACHSHADERPROC) \
+	GL_FUN(GetAttribLocation, _PFNGLGETATTRIBLOCATIONPROC) \
 	GL_FUN(GetShaderiv, _PFNGLGETSHADERIVPROC) \
 	GL_FUN(GetShaderInfoLog, _PFNGLGETSHADERINFOLOGPROC) \
 	/* Program */ \
@@ -173,7 +182,11 @@ typedef void (APIENTRYP _PFNGLBINDVERTEXARRAYPROC) (GLuint array);
 	GL_FUN(BindAttribLocation, _PFNGLBINDATTRIBLOCATIONPROC) \
 	GL_FUN(EnableVertexAttribArray, _PFNGLENABLEVERTEXATTRIBARRAYPROC) \
 	GL_FUN(DisableVertexAttribArray, _PFNGLDISABLEVERTEXATTRIBARRAYPROC) \
-	GL_FUN(VertexAttribPointer, _PFNGLVERTEXATTRIBPOINTERPROC)
+	GL_FUN(VertexAttribPointer, _PFNGLVERTEXATTRIBPOINTERPROC) \
+	/* Map/Unmap buffer */ \
+	GL_FUN(MapBuffer, _PFNGLMAPBUFFERPROC) \
+	GL_FUN(UnmapBuffer, _PFNGLUNMAPBUFFERPROC) \
+	GL_FUN(DrawArrays, _PFNGLDRAWARRAYSPROC)
 
 #define GL_FBO_FUN \
 	/* Framebuffer object */ \

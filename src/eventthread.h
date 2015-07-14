@@ -26,6 +26,7 @@
 #include "etc-internal.h"
 #include "sdl-util.h"
 #include "keybindings.h"
+#include "settingsmenu.h"
 
 #include <SDL_scancode.h>
 #include <SDL_joystick.h>
@@ -62,6 +63,7 @@ public:
 	};
 
 	static MouseState mouseState;
+	static uint32_t UsrIdStart;
 
 	static bool allocUserEvents();
 
@@ -85,6 +87,20 @@ public:
 	/* RGSS thread calls this once per frame */
 	void notifyFrame();
 
+	/* User event codes */
+	enum
+	{
+		REQUEST_SETFULLSCREEN = 0,
+		REQUEST_WINRESIZE,
+		REQUEST_MESSAGEBOX,
+		REQUEST_SETCURSORVISIBLE,
+
+		UPDATE_FPS,
+		UPDATE_POPUP,
+
+		EVENT_COUNT
+	};
+
 private:
 	void resetInputStates();
 	void setFullscreen(SDL_Window *, bool mode);
@@ -92,6 +108,7 @@ private:
 
 	bool fullscreen;
 	bool showCursor;
+	SettingsMenu *sMenu;
 	AtomicFlag msgBoxDone;
 
 	struct

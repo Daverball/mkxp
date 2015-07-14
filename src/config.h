@@ -94,6 +94,8 @@ struct Config
 	Config();
 
 	void read(int argc, char *argv[]);
+	bool store(const char* key, int value);
+	bool store(const char* key, bool value);
 	void readGameINI();
 };
 

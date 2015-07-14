@@ -157,6 +157,12 @@ set(MAIN_HEADERS
 	src/sharedmidistate.h
 	src/fluid-fun.h
 	src/sdl-util.h
+	src/imgui/imconfig.h
+	src/imgui/imgui.h
+	src/imgui/imgui_impl_sdl.h
+	src/imgui/stb_rect_pack.h
+	src/imgui/stb_textedit.h
+	src/imgui/stb_truetype.h
 )
 
 set(MAIN_SOURCE
@@ -203,6 +209,8 @@ set(MAIN_SOURCE
 	src/autotilesvx.cpp
 	src/midisource.cpp
 	src/fluid-fun.cpp
+	src/imgui/imgui.cpp
+	src/imgui/imgui_impl_sdl.cpp
 )
 
 source_group("MKXP Source" FILES ${MAIN_SOURCE} ${MAIN_HEADERS})
