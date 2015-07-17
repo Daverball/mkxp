@@ -201,6 +201,8 @@ enum State
 	AwaitingInput
 };
 
+static bool resCheckbox[3];
+
 struct SettingsMenuPrivate
 {
 	State state;
@@ -438,17 +440,81 @@ struct SettingsMenuPrivate
 		}
 	}
 
+	static inline bool resolutionEqualsN(int* x, int* y, int n)
+	{
+		return ((x[0] == n*y[0]) && (x[1] == n*y[1]));
+	}
+
+	static inline bool TextCheckbox(const char* str_id, bool active, bool &hovered, const ImVec2 &size)
+	{
+		bool result;
+		ImVec2 innerPadding = ImGui::GetStyle().FramePadding;
+		ImVec2 innerSize = ImVec2(size.x-2*innerPadding.x, size.y-2*innerPadding.y);
+		ImGuiID id = ImGui::GetID(str_id);
+
+		/* Set button colors to match checkbox */
+		if(active)
+			ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyle().Colors[ImGuiCol_CheckMark]);
+		else
+			ImGui::PushStyleColor(ImGuiCol_Button, ImColor(0, 0, 0, 0));
+		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyle().Colors[ImGuiCol_Button]);
+		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImGui::GetStyle().Colors[ImGuiCol_CheckMark]);
+
+		/* Was item hovered in the previous frame? */
+		if(hovered)
+			ImGui::PushStyleColor(ImGuiCol_FrameBg, ImGui::GetStyle().Colors[ImGuiCol_FrameBgHovered]);
+		ImGui::BeginChildFrame(id, size);
+		if(hovered)
+			ImGui::PopStyleColor();
+		hovered = ImGui::IsWindowHovered();
+
+		/* Align button properly in child window */
+		ImVec2 pos = ImGui::GetWindowPos();
+		pos.x += innerPadding.x;
+		pos.y += innerPadding.y;
+		ImGui::SetWindowPos(pos);
+		result = ImGui::Button(str_id, innerSize);
+		ImGui::EndChildFrame();
+		ImGui::PopStyleColor();
+		ImGui::PopStyleColor();
+		ImGui::PopStyleColor();
+		return result;
+	}
+
 	void displayGraphicsTab()
 	{
-		ImGui::BeginGroup();
 		if(ImGui::CollapsingHeader("Display Settings", 0, true, true))
 		{
-			if(ImGui::InputInt2("Window Size", &tempConfig.defScreenW))
+			/* current resolution and native rendering resolution */
+			int *res = &tempConfig.defScreenW;
+			int native[2] = {(rtData.config.rgssVersion == 1 ? 640 : 544),
+							 (rtData.config.rgssVersion == 1 ? 480 : 416)};
+
+			if(ImGui::InputInt2("Window Size", res))
 			{
 				/* clamp to between 320x240 and 4K resolutions */
 				tempConfig.defScreenW = std::min(std::max(tempConfig.defScreenW, 320),4096);
-				tempConfig.defScreenH = std::min(std::max(tempConfig.defScreenW, 240),2160);
+				tempConfig.defScreenH = std::min(std::max(tempConfig.defScreenH, 240),2160);
 			}
+			if(TextCheckbox("1X native", resolutionEqualsN(res, native, 1), resCheckbox[0], ImVec2(80, 24)))
+			{
+				res[0] = native[0];
+				res[1] = native[1];
+			}
+			ImGui::SameLine();
+			if(TextCheckbox("2X native", resolutionEqualsN(res, native, 2), resCheckbox[1], ImVec2(80, 24)))
+			{
+				res[0] = 2*native[0];
+				res[1] = 2*native[1];
+			}
+			ImGui::SameLine();
+			if(TextCheckbox("3X native", resolutionEqualsN(res, native, 3), resCheckbox[2], ImVec2(80, 24)))
+			{
+				res[0] = 3*native[0];
+				res[1] = 3*native[1];
+			}
+			ImGui::SameLine();
+			ImGui::Text("Recommended if no smooth upscaling.");
 			ImGui::Checkbox("Start in fullscreen", &tempConfig.fullscreen);
 			ImGui::SameLine();
 			ImGui::Checkbox("Keep aspect ratio", &tempConfig.fixedAspectRatio);
