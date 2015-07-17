@@ -481,6 +481,17 @@ struct SettingsMenuPrivate
 		return result;
 	}
 
+	static inline void TextCentered(const char* str_id, const ImVec2 &size)
+	{
+		ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyle().Colors[ImGuiCol_WindowBg]);
+		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyle().Colors[ImGuiCol_WindowBg]);
+		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImGui::GetStyle().Colors[ImGuiCol_WindowBg]);
+		ImGui::Button(str_id, size);
+		ImGui::PopStyleColor();
+		ImGui::PopStyleColor();
+		ImGui::PopStyleColor();
+	}
+
 	void displayGraphicsTab()
 	{
 		if(ImGui::CollapsingHeader("Display Settings", 0, true, true))
@@ -514,7 +525,7 @@ struct SettingsMenuPrivate
 				res[1] = 3*native[1];
 			}
 			ImGui::SameLine();
-			ImGui::Text("Recommended if no smooth upscaling.");
+			TextCentered("Recommended if no smooth upscaling.", ImVec2(0, 24));
 			ImGui::Checkbox("Start in fullscreen", &tempConfig.fullscreen);
 			ImGui::SameLine();
 			ImGui::Checkbox("Keep aspect ratio", &tempConfig.fixedAspectRatio);
