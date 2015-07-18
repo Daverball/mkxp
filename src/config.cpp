@@ -38,8 +38,8 @@ extern "C" {
 #include <libguess.h>
 }
 #include <iconv.h>
-#include <errno.h>
 #endif
+#include <errno.h>
 
 /* http://stackoverflow.com/a/1031773 */
 static bool validUtf8(const char *string)
@@ -159,121 +159,143 @@ Config::Config()
 	midi.chorus = false;
 	midi.reverb = false;
 	SE.sourceCount = 6;
+	execPath = std::string("");
 }
 
 /* Pre-convert value to string since we don't care about the type at this point anymore */
-static bool updateConfigFileValue(const char *key, const char *value)
+bool Config::updateConfigFileValue(const char *key, const char *value)
 {
-	/* Open files for reading and writing */
-	std::ifstream confRead;
-	confRead.open(CONF_FILE);
-	std::ofstream confWrite;
-	confWrite.open(CONF_FILE_TMP, std::ofstream::trunc);
-
-	if(confWrite && confRead)
+	std::string confPath = execPath + CONF_FILE;
+	std::string tempPath = execPath + CONF_FILE_TMP;
+	/* Insert scope so that file handles definitely get cleaned up, even on bitchy windows */
 	{
-		/* Buffer to store config file lines */
-		char buf[512];
-		bool valWritten = false;
-		while(!confRead.eof())
+		/* Open files for reading and writing */
+		std::ifstream confRead;
+		confRead.open(confPath.c_str());
+		std::ofstream confWrite;
+		confWrite.open(tempPath.c_str(), std::ofstream::trunc);
+
+		if(confWrite && confWrite.is_open() && confRead && confRead.is_open())
 		{
-			/* Get next line */
-			confRead.getline(buf, 512);
+			/* Buffer to store config file lines */
+			char buf[512];
+			bool valWritten = false;
+			while(!confRead.eof())
+			{
+				/* Get next line */
+				confRead.getline(buf, 512);
 
-			if(confRead.fail())
-			{
-				/* This means we either encountered an empty line,
-				/* which is fine, or the line was too big. Maybe
-				/* handle the case of long lines in the future? */
-			}
-			else if(strncmp(buf, key, strlen(key)) == 0)
-			{
-				/* This is the line we want to overwrite. For now
-				/* discard duplicate lines of the same key */
-				if(valWritten)
-					continue;
+				if(confRead.fail())
+				{
+					/* This means we either encountered an empty line,
+					/* which is fine, or the line was too big. Maybe
+					/* handle the case of long lines in the future? */
+				}
+				else if(strncmp(buf, key, strlen(key)) == 0)
+				{
+					/* This is the line we want to overwrite. For now
+					/* discard duplicate lines of the same key */
+					if(valWritten)
+						continue;
 
-				confWrite << key << '=' << value;
-				valWritten = true;
+					confWrite << key << '=' << value;
+					valWritten = true;
+				}
+				else
+				{
+					/* Just copy the old line into the new file,
+					/* use gcount()-1 to not copy null character
+					/* but only if not EOF */
+					assert(confRead.gcount() > 0 && confRead.gcount() < 512);
+					int trim = confRead.eof() ? 0 : 1;
+					confWrite.write(buf, confRead.gcount()-trim);
+				}
+				if(!confRead.eof())
+					confWrite << '\n';
 			}
-			else
-			{
-				/* Just copy the old line into the new file,
-				/* use gcount()-1 to not copy null character
-				/* but only if not EOF */
-				assert(confRead.gcount() > 0 && confRead.gcount() < 512);
-				int trim = confRead.eof() ? 0 : 1;
-				confWrite.write(buf, confRead.gcount()-trim);
-			}
-			if(!confRead.eof())
-				confWrite << '\n';
+
+			confRead.close();
+			confWrite.close();
 		}
+		else
+		{
+			Debug() << CONF_FILE": Failed to update config file.";
 
-		confRead.close();
-		confWrite.close();
+			if(confRead.is_open())
+				confRead.close();
 
-		/* Backup old config file and move the new one into place */
-		remove(CONF_FILE);
-		rename(CONF_FILE_TMP, CONF_FILE);
+			if(confWrite.is_open())
+				confWrite.close();
 
-		return true;
+			return false;
+		}
 	}
-	Debug() << CONF_FILE": Failed to update config file.\n";
 
-	if(confRead.is_open())
-		confRead.close();
+	/* Backup old config file and move the new one into place */
+	if(std::remove(confPath.c_str()) == -1){
+		Debug() << CONF_FILE": removal of the old config failed.";
+	}
+	if(std::rename(tempPath.c_str(), confPath.c_str()) != 0){
+		Debug() << CONF_FILE": replacing the old config failed.";
+	}
 
-	if(confWrite.is_open())
-		confWrite.close();
-
-	return false;
+	return true;
 }
 
 bool Config::store(const char *key, int value)
 {
-	std::ifstream confFileRead;
-	confFileRead.open(CONF_FILE);
-	int curValue;
-	if(confFileRead)
+	bool update = false;
+	std::string confPath = execPath + CONF_FILE;
+	/* Insert scope to make sure file handles get cleaned up */
 	{
-		/* First read the config file to get the currently stored value
-		/* and check whether it's in the config file at all */
-		po::options_description podesc;
-		po::variables_map vm;
-		podesc.add_options()(key, po::value<int>()->required());
-		try
+		std::ifstream confFileRead;
+		confFileRead.open(confPath.c_str());
+		int curValue;
+		if(confFileRead && confFileRead.is_open())
 		{
+			/* First read the config file to get the currently stored value
+			/* and check whether it's in the config file at all */
+			po::options_description podesc;
+			po::variables_map vm;
+			podesc.add_options()(key, po::value<int>()->required());
 			try
 			{
-				po::store(po::parse_config_file(confFileRead, podesc, true), vm);
-				po::notify(vm);
-				curValue = vm[key].as<int>();
-			}
-			catch(po::multiple_occurrences e)
-			{
-				/* This is fine we're gonna remove the duplicates when storing */
-				curValue = ~value;
-			}
+				try
+				{
+					po::store(po::parse_config_file(confFileRead, podesc, true), vm);
+					po::notify(vm);
+					curValue = vm[key].as<int>();
+				}
+				catch(po::multiple_occurrences e)
+				{
+					/* This is fine we're gonna remove the duplicates when storing */
+					curValue = ~value;
+				}
 
-			if(curValue == value)
-			{
-				/* We don't need to store anything */
-				return true;
-			}
-			else
-			{
-				/* Update the relevant config file line */
-				char num[21];
-				snprintf(num, 21, "%d", value);
-				return updateConfigFileValue(key, num);
-			}
-		} catch (...) {}
-		confFileRead.close();
+				if(curValue == value)
+				{
+					/* We don't need to store anything */
+					confFileRead.close();
+					return true;
+				}
+				/* needs file update */
+				update = true;
+			} catch (...) {}
+			confFileRead.close();
+		}
 	}
-	
+
+	if(update)
+	{
+		/* Update the relevant config file line */
+		char num[21];
+		snprintf(num, 21, "%d", value);
+		return updateConfigFileValue(key, num);
+	}
+
 	/* Open file for writing */
 	std::ofstream confFileWrite(CONF_FILE, std::ofstream::app);
-	if(confFileWrite)
+	if(confFileWrite && confFileWrite.is_open())
 	{
 		/* Append new config line */
 		confFileWrite << '\n' << key << '=' << value;
@@ -288,45 +310,56 @@ bool Config::store(const char *key, int value)
 
 bool Config::store(const char *key, bool value)
 {
-	std::ifstream confFileRead;
-	confFileRead.open(CONF_FILE);
-	bool curValue;
-	if(confFileRead)
+	bool update = false;
+	std::string confPath = execPath + CONF_FILE;
+	/* Insert scope to make sure file handles get cleaned up */
 	{
-		/* First read the config file to get the currently stored value */
-		po::options_description podesc;
-		po::variables_map vm;
-		podesc.add_options()(key, po::value<bool>()->required());
-		try
+		std::ifstream confFileRead;
+		confFileRead.open(confPath.c_str());
+		bool curValue;
+		if(confFileRead && confFileRead.is_open())
 		{
+			/* First read the config file to get the currently stored value
+			/* and check whether it's in the config file at all */
+			po::options_description podesc;
+			po::variables_map vm;
+			podesc.add_options()(key, po::value<bool>()->required());
 			try
 			{
-				po::store(po::parse_config_file(confFileRead, podesc, true), vm);
-				po::notify(vm);
-				curValue = vm[key].as<bool>();
-			}
-			catch(po::multiple_occurrences &e)
-			{
-				/* This is fine we're gonna remove the duplicates when storing */
-				curValue = !value;
-			}
-			if(curValue == value)
-			{
-				/* We don't need to store anything */
-				return true;
-			}
-			else
-			{
-				/* Update the relevant config file line */
-				return updateConfigFileValue(key, value ? "true" : "false");
-			}
-		} catch (...) {}
-		confFileRead.close();
+				try
+				{
+					po::store(po::parse_config_file(confFileRead, podesc, true), vm);
+					po::notify(vm);
+					curValue = vm[key].as<bool>();
+				}
+				catch(po::multiple_occurrences e)
+				{
+					/* This is fine we're gonna remove the duplicates when storing */
+					curValue = ~value;
+				}
+
+				if(curValue == value)
+				{
+					/* We don't need to store anything */
+					confFileRead.close();
+					return true;
+				}
+				/* needs file update */
+				update = true;
+			} catch (...) {}
+			confFileRead.close();
+		}
 	}
-	
+
+	if(update)
+	{
+		/* Update the relevant config file line */
+		return updateConfigFileValue(key, value ? "true" : "false");
+	}
+
 	/* Open file for writing */
 	std::ofstream confFileWrite(CONF_FILE, std::ofstream::app);
-	if(confFileWrite)
+	if(confFileWrite && confFileWrite.is_open())
 	{
 		/* Append new config line */
 		confFileWrite << '\n' << key << '=' << std::boolalpha << value;

@@ -90,6 +90,7 @@ struct Config
 	/* Internal */
 	std::string customDataPath;
 	std::string commonDataPath;
+	std::string execPath;
 
 	Config();
 
@@ -97,6 +98,9 @@ struct Config
 	bool store(const char* key, int value);
 	bool store(const char* key, bool value);
 	void readGameINI();
+
+	private:
+	bool updateConfigFileValue(const char *key, const char *value);
 };
 
 #endif // CONFIG_H

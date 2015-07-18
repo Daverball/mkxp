@@ -205,6 +205,13 @@ int main(int argc, char *argv[])
 	/* now we load the config */
 	Config conf;
 
+	char *execDir = SDL_GetBasePath();
+	if (execDir)
+	{
+		conf.execPath = std::string(execDir);
+		SDL_free(execDir);
+	}
+
 	conf.read(argc, argv);
 	conf.readGameINI();
 
