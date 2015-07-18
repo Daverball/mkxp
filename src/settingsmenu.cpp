@@ -355,6 +355,8 @@ struct SettingsMenuPrivate
 					break;
 			}
 			ImGui::End();
+			ImGui::PopStyleColor(4);
+			ImGui::PopStyleVar();
 		}
 		ImGui::Render();
 		SDL_GL_SwapWindow(window);
@@ -409,9 +411,8 @@ struct SettingsMenuPrivate
 			}
 
 			ImGui::EndChild();
+			ImGui::PopStyleColor(2);
 			ImGui::PopStyleVar();
-			ImGui::PopStyleColor();
-			ImGui::PopStyleColor();
 
 			ImGui::Spacing();
 			ImGui::Separator();
@@ -475,9 +476,7 @@ struct SettingsMenuPrivate
 		ImGui::SetWindowPos(pos);
 		result = ImGui::Button(str_id, innerSize);
 		ImGui::EndChildFrame();
-		ImGui::PopStyleColor();
-		ImGui::PopStyleColor();
-		ImGui::PopStyleColor();
+		ImGui::PopStyleColor(3);
 		return result;
 	}
 
@@ -487,9 +486,7 @@ struct SettingsMenuPrivate
 		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyle().Colors[ImGuiCol_WindowBg]);
 		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImGui::GetStyle().Colors[ImGuiCol_WindowBg]);
 		ImGui::Button(str_id, size);
-		ImGui::PopStyleColor();
-		ImGui::PopStyleColor();
-		ImGui::PopStyleColor();
+		ImGui::PopStyleColor(3);
 	}
 
 	void displayGraphicsTab()
