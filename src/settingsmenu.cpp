@@ -449,6 +449,7 @@ struct SettingsMenuPrivate
 	static inline bool TextCheckbox(const char* str_id, bool active, bool &hovered, const ImVec2 &size)
 	{
 		bool result;
+		bool pushedFour = false;
 		ImVec2 innerPadding = ImGui::GetStyle().FramePadding;
 		ImVec2 innerSize = ImVec2(size.x-2*innerPadding.x, size.y-2*innerPadding.y);
 		ImGuiID id = ImGui::GetID(str_id);
@@ -463,10 +464,11 @@ struct SettingsMenuPrivate
 
 		/* Was item hovered in the previous frame? */
 		if(hovered)
+		{
 			ImGui::PushStyleColor(ImGuiCol_FrameBg, ImGui::GetStyle().Colors[ImGuiCol_FrameBgHovered]);
+			pushedFour = true;
+		}
 		ImGui::BeginChildFrame(id, size);
-		if(hovered)
-			ImGui::PopStyleColor();
 		hovered = ImGui::IsWindowHovered();
 
 		/* Align button properly in child window */
@@ -476,7 +478,7 @@ struct SettingsMenuPrivate
 		ImGui::SetWindowPos(pos);
 		result = ImGui::Button(str_id, innerSize);
 		ImGui::EndChildFrame();
-		ImGui::PopStyleColor(3);
+		ImGui::PopStyleColor(pushedFour ? 4 : 3);
 		return result;
 	}
 
