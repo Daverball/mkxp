@@ -95,6 +95,13 @@
 # subImageFix=false
 
 
+# Enable framebuffer blitting if the driver is
+# capable of it. Some drivers carry buggy
+# implementations of this functionality, so
+# disabling it can be used as a workaround
+# (default: enabled)
+#
+# enableBlitting=true
 # Set the base path of the game to '/path/to/game'
 # (default: executable directory)
 #

@@ -46,6 +46,7 @@ struct Config
 	bool solidFonts;
 
 	bool subImageFix;
+	bool enableBlitting;
 
 	std::string gameFolder;
 	bool anyAltToggleFS;
